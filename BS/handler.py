@@ -22,6 +22,7 @@ def msgHandler(sock, data, address):
     handler = { "CN_INFO": cn_info_handler,
             'BS_SELECT_CL_RESP': select_cl_resp_handler, 
             'CL_EXPIRE_BS': cl_expire_handler, 
+            'DATA_TRIGGER': data_trigger_handler, 
             'CL_DATA_INIT_REJ': data_init_rej_handler, 
             'CL_DATA_INIT_HOLD': data_init_hold_handler, 
             'CL_DATA_INIT_OK': data_init_ok_handler, 
@@ -88,6 +89,84 @@ def cn_info_handler(sock, rxdata, address):
     print "***              ***"
 
 
+def cl_reliable_data_tx_thread(dsock, metadata, cs_address, cl_address, src_port, chunk_size):
+    # Start TCP server
+    t=socket(AF_INET, SOCK_STREAM)
+    t.bind(("0.0.0.0",src_port))                 # Binds the socket. Note that the input to 
+                                                    # the bind function is a tuple
+    t.listen(1)
+    
+    # Send BS_DATA_INIT_REQ to CL
+    cl_msg = {}
+    cl_msg['msgType'] = 'BS_DATA_INIT_REQ'
+    cl_msg['chunk_size'] = globals.data_chunk_size
+    cl_msg['data_port'] = src_port
+    cl_msg['metadata'] = metadata
+    
+    cl_msg_json = json.dumps(cl_msg)
+    dsock.sendto(cl_msg_json, cl_address)
+
+    print "Waiting for CL to connect" 
+    q, addr = t.accept()
+    print "Connection Established"
+
+    # Receive file from CS and send to CL
+    dst_file = open(metadata['name'], 'wb')
+    tbytes = 0
+    s=socket(AF_INET, SOCK_STREAM)      # Creates a socket
+    s.connect(cs_address)          # Connect to server address
+    while True:   
+        chunk = s.recv(chunk_size)
+        dst_file.write(chunk)
+        q.send(chunk)
+        tbytes += len(chunk)
+        if len(chunk) == 0:
+            break;
+
+    s.close()
+    t.close()
+    dst_file.close()
+    
+    print "bytes received =", str(tbytes) 
+         
+         
+
+def data_trigger_handler(sock, rxdata, address):
+    print "DATA_TRIGGER received"
+    globals.data_chunk_size = rxdata['chunk_size']
+    metadata = rxdata['metadata']
+    cs_data_port = rxdata['data_port']
+    if metadata['mime'] == 'file':
+        # Start a thread for CL
+        t = Thread(target=cl_reliable_data_tx_thread, args=(sock, metadata, (address[0], cs_data_port), (globals.activeCL.ip, globals.activeCL.port), globals.ServerDataPort , globals.data_chunk_size))
+        t.start()
+        # Connect to CS and receive file
+         
+    else:
+        print "MIME not supported"
+
+
+    # Send BS_DATA_INIT_REQ to CL
+    #cl_msg = {}
+    #cl_msg['msgType'] = 'BS_DATA_INIT_REQ'
+    #cl_msg['chunk_size'] = globals.data_chunk_size
+    #cl_msg['metadata'] = metadata
+    
+    #cl_msg_json = json.dumps(cl_msg)
+
+    #if (globals.activeCL is not None):
+    #    sock.sendto(cl_msg_json, (globals.activeCL.ip, globals.activeCL.port))
+    #    # dummy response back to CS
+    #    resp = {}
+    #    resp['msgType'] = 'DATA_TRIGGER_OK'
+    #else:
+    #    print 'Data Trigger Failed - No Active CL'
+    #    resp = {}
+    #    resp['msgType'] = 'DATA_TRIGGER_REJECT'
+    #
+    #
+    #    resp_json = json.dumps(resp)
+    #    sock.sendto(resp_json, address) 
 
 def select_cl_resp_handler(sock, rxdata, address):
     print "BS_SELECT_CL_RESP received"
