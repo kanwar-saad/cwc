@@ -1,0 +1,155 @@
+package com.example.testapp;
+
+
+
+import java.lang.reflect.Method;
+import java.net.DatagramPacket;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.JSONValue;
+
+import android.util.Log;
+
+public class ControlReceiver extends Thread {
+	
+	private static final String TAG = "CtrlRxThread";
+	private static final int maxCtrlMsgLen = 1024;
+	
+	private UDPConnection CtrlChannel;
+	private NetLog NLog;
+	
+	
+	private void setupChannel()
+	{
+		// Get Broadcast Address //
+		
+		//String bcAddr = UDPConnection.getBroadcastAddr(UDPConnection.getLocalIP(), 16);
+		//String bcAddr = UDPConnection.getBroadcastAddr("", 16);
+		
+    	// Start Connection //
+    	
+    	//CtrlChannel = new UDPConnection(null, bcAddr, ConfigData.getCtrlPort(), ConfigData.getCtrlPort(), true);
+		
+    	///////   HACK FOR EMULATOR ///////
+		
+    	//CtrlChannel = new UDPConnection(null, ConfigData.getLogServerAdd() , ConfigData.getCtrlPort(), 9206, false);
+		CtrlChannel = ConfigData.CtrlSock;
+		NLog = ConfigData.Log;
+		CtrlChannel.setDstIP("192.168.2.10");
+		CtrlChannel.send("Ping");
+		///////////////////////////////////
+		
+				
+	}
+	
+	public void run() {
+		
+        // Create Rx Control Channel //
+		
+		setupChannel();
+		
+		// Allocate Resources // 
+		byte[] receiveData = new byte[maxCtrlMsgLen];
+		DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+		
+		
+		try { Thread.sleep(5000); } catch (Exception e){};
+		Log.d(TAG, "Rx Control Thread Strated");
+		
+		// Start Listening Loop //
+		
+		while (true){
+			String strData = null;
+			// receive packet //
+			
+			try
+			{
+			    CtrlChannel.getSocket().receive(receivePacket);
+			    strData = new String(receivePacket.getData(), receivePacket.getOffset(), receivePacket.getLength());
+		    }
+			catch(Exception e)
+			{
+				//CtrlChannel.close();
+				Log.e(TAG, "Error Receiving data in RxThread" );
+				return;
+			}
+			Log.d(TAG, "Rx raw data : " + strData);
+			
+			// Parse JSON //
+			
+			Object obj = null;
+			try
+			{
+				obj=JSONValue.parse(strData);
+			}
+			catch(Exception e)
+			{
+				Log.d(TAG, "Invalid Control Packet Received" );
+				continue;
+			}		
+			
+			// Process Received Message //
+			
+			msgHandler(obj, receivePacket.getAddress().getHostAddress(), receivePacket.getPort());
+			
+		}       
+    }
+	
+	private void msgHandler(Object cPkt, String Address, int port)
+	{
+		JSONObject rxdata = null;
+		try
+		{
+			Log.d(TAG, "Packet received from " + Address + String.valueOf(port));
+		
+			rxdata = (JSONObject) cPkt;
+		
+			Log.d(TAG, "value " + rxdata.get("msgType"));
+			
+		}
+		catch(Exception e){Log.d(TAG, "Error in JSON handling"); return;}
+		
+		String msgType = (String)rxdata.get("msgType");
+		
+		Map<String, Method> fMap = new LinkedHashMap();
+		Class[] params = new Class[3];
+		params[0] = JSONObject.class;
+		params[1] = String.class;
+		params[2] = Integer.TYPE;		
+		
+		try{
+		fMap.put("CN_DISCOVERY_REQ", this.getClass().getDeclaredMethod("handle_disc_req", params));
+		fMap.put("CN_DISCOVERY_RESP", this.getClass().getDeclaredMethod("handle_disc_resp", params));
+		}
+		catch(Exception e){Log.d(TAG, "No such methods found"); return;}
+		
+		Method m = fMap.get(msgType);
+		if (m == null){
+			Log.d(TAG,  "Invalid Message Type Received");
+			return ;
+		}
+		else{
+			try{
+			m.invoke(this, rxdata, Address, port);
+			}
+			catch(Exception e){Log.d(TAG, "Error invoking method"); return;}
+		}
+			
+		
+		
+	}
+	
+	private void handle_disc_req(JSONObject rxdata, String ip, int port){
+		Log.d(TAG, "cnid " + rxdata.get("cnid"));
+		Log.d(TAG, "ip " + ip);
+		Log.d(TAG, "port " + String.valueOf(port));
+		
+	}
+	
+	private void handle_disc_resp(JSONObject rxdata, String ip, int port){
+		return;
+	}
+}

@@ -1,0 +1,49 @@
+package com.example.testapp;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.Socket;
+import java.net.UnknownHostException;
+
+import android.content.Context;
+import android.util.Log;
+
+public class FileSenderTCP extends Thread {
+	
+	private Context context;
+	private String ip = "";
+	private int port;
+	private File filePath;
+	
+	
+	public FileSenderTCP(Context ctx, String mIp, int mPort, File fPath){
+		ip = mIp;
+		port = mPort;
+		filePath = fPath;
+		context = ctx;		
+	}
+	
+	public void run(){
+		Socket clientSocket;
+		try {
+			clientSocket = new Socket(ip, port);
+			
+		} catch (UnknownHostException e) {
+			Log.e(TAG, "Error in Data init connection to BS");
+			e.printStackTrace();
+		} catch (IOException e) {
+			Log.e(TAG, "Error in Data init connection to BS");
+			e.printStackTrace();
+		}
+		
+	}
+	
+	
+	
+	
+	private boolean rx_data(){
+		
+		return true;
+	}
+	
+}

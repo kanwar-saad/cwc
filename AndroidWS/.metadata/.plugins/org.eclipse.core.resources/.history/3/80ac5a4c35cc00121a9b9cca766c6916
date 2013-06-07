@@ -1,0 +1,21 @@
+package com.example.testapp;
+
+public class DataHandler extends Thread {
+	
+	private UDPConnection dataSock;
+	
+	
+	public void run(){
+		
+	}
+	
+	private int init_thread(){
+		dataSock = new UDPConnection("", "", ConfigData.getDataPort(), ConfigData.getBSPort(), false);
+	}
+	
+	
+	private int rx_data(){
+		
+	}
+	
+}

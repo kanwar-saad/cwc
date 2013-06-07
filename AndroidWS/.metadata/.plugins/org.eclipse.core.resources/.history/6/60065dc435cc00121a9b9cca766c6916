@@ -1,0 +1,24 @@
+package com.example.testapp;
+
+public class DataHandler extends Thread {
+	
+	private UDPConnection dataSock;
+	
+	public String media_name = "";
+	public String media_type = "";
+	
+	public void run(){
+		
+	}
+	
+	private boolean init_thread(){
+		dataSock = new UDPConnection("", ConfigData.getBSAddress(), ConfigData.getDataPort(), ConfigData.getBSPort(), false);
+		return true;
+	}
+	
+	
+	private boolean rx_data(){
+		return true;
+	}
+	
+}

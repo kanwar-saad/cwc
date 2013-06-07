@@ -1,0 +1,30 @@
+package com.example.testapp;
+
+public class FileSenderTCP extends Thread {
+	
+	private UDPConnection dataSock;
+	
+	public String ip = "";
+	public String port = "";
+	public File filePath;
+	
+	
+	public FileSenderTCP(String mIp, String mPort, String fPath){
+		ip = mIp;
+		port = mPort;
+		
+	}
+	
+	public void run(){
+		
+	}
+	
+	
+	
+	
+	private boolean rx_data(){
+		
+		return true;
+	}
+	
+}

@@ -1,0 +1,97 @@
+package com.example.testapp;
+
+import java.util.Dictionary;
+import java.util.Hashtable;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.os.BatteryManager;
+import android.util.Log;
+
+public class Utils {
+
+	private static final String TAG = "MyActivity";
+	
+	
+	private static boolean charging;
+	private static int chargePlug;
+	private static boolean usbCharge;
+	private static boolean acCharge;
+	private static int level_percent;
+	
+	private static ReadWriteLock batteryLock = new ReentrantReadWriteLock();
+		
+	public static BroadcastReceiver mBatInfoReceiver = new BroadcastReceiver(){
+        @Override
+        public void onReceive(Context arg0, Intent intent) {
+          // Extract battery stats from Intent Extras
+        	Lock l = batteryLock.writeLock();
+        	l.lock();
+        	try {
+        		// access the resource protected by this lock
+        		  
+			    int status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
+			    int level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+			    int scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
+			    int chargePlug = intent.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1);
+			    
+			    level_percent = level/scale;
+			    charging = (status == BatteryManager.BATTERY_STATUS_CHARGING) || (status == BatteryManager.BATTERY_STATUS_FULL);
+			    usbCharge = (chargePlug == BatteryManager.BATTERY_PLUGGED_USB);
+			    acCharge = (chargePlug == BatteryManager.BATTERY_PLUGGED_AC);
+			  
+			  
+			    Log.v(TAG, "Battery Properties" );
+			    Log.v(TAG, String.valueOf(status) );
+			    Log.v(TAG, String.valueOf(charging) );
+			    Log.v(TAG, String.valueOf(usbCharge) );
+			    Log.v(TAG, String.valueOf(acCharge) );
+			    Log.v(TAG, String.valueOf(level) );
+			    Log.v(TAG, String.valueOf(scale) );
+        	} 
+        	finally {
+     		   l.unlock();
+     		}
+          
+        }
+      };
+      
+      
+      public static Dictionary getBatteryStatus()
+      {
+    	  Dictionary ret = new Hashtable();
+    	  Lock l = batteryLock.readLock();
+      	  l.lock();
+      	  try {
+      			
+      			ret.put("charge_percent", level_percent);
+      			ret.put("charging", charging);
+      			ret.put("charge_plug", charge_plug);
+      			ret.put("charge_ac", acCharge);
+      			ret.put("charge_usb", usbCharge);
+      			
+      			
+			    Log.v(TAG, "Battery Properties" );
+			    Log.v(TAG, String.valueOf(status) );
+			    Log.v(TAG, String.valueOf(charging) );
+			    Log.v(TAG, String.valueOf(usbCharge) );
+			    Log.v(TAG, String.valueOf(acCharge) );
+			    Log.v(TAG, String.valueOf(level) );
+			    Log.v(TAG, String.valueOf(scale) );
+      	  } 
+      	  finally {
+   		     l.unlock();
+   		  }
+    	  
+      	  
+      	  return ret;
+    	  
+      };
+	
+	
+	
+}
