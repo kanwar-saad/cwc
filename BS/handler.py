@@ -111,13 +111,13 @@ def cl_reliable_data_tx_thread(dsock, metadata, cs_address, cl_address, src_port
     print "Connection Established"
 
     # Receive file from CS and send to CL
-    dst_file = open(metadata['name'], 'wb')
+    #dst_file = open(metadata['name'], 'wb')
     tbytes = 0
     s=socket(AF_INET, SOCK_STREAM)      # Creates a socket
     s.connect(cs_address)          # Connect to server address
     while True:   
         chunk = s.recv(chunk_size)
-        dst_file.write(chunk)
+        #dst_file.write(chunk)
         q.send(chunk)
         tbytes += len(chunk)
         if len(chunk) == 0:

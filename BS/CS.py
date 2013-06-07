@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import sys
+import os
 import time
 import json
 import globals
@@ -15,6 +16,7 @@ cs_port = 8089
 cs_data_port = 4446 
 csSock = None
 data_chunk_size = 1024
+file_name = "bamboo.jpg"
 
 def get_next_chunk(src, size):
             data = src.read(size)
@@ -33,16 +35,17 @@ def start():
     print "Initialization complete"
     
     try:
-        src_file = open('image.jpg', 'rb')
-        
+        src_file = open(file_name, 'rb')
+        file_size = os.path.getsize(file_name) 
 
         msg = {}
         msg['msgType'] = 'DATA_TRIGGER'
         msg['chunk_size'] = data_chunk_size
         msg['data_port'] = cs_data_port
         msg['metadata'] = {}
-        msg['metadata']['name'] = 'Stream1.jpg'
+        msg['metadata']['name'] = file_name
         msg['metadata']['mime'] = 'file'
+        msg['metadata']['file_size'] = str(file_size)
 
 
         json_msg = json.dumps(msg)
@@ -72,7 +75,8 @@ def start():
                 break
 
         src_file.close()
-
+        s.shutdown(1);
+        s.close();
         print "Iterations = ", str(iterations)
 
         #jsondata, addr = csSock.recvfrom(1024)
