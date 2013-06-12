@@ -1,7 +1,5 @@
 package com.example.testapp;
 
-
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -27,7 +25,10 @@ import com.example.testapp.ConfigData.Severity;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
 import android.webkit.MimeTypeMap;
 
@@ -39,11 +40,14 @@ public class ControlReceiver extends Thread {
 	private UDPConnection CtrlChannel;
 	private NetLog NLog;
 	private Context context;
+	private Handler handler;
 	private static Thread dataThread;
 	
 	
-	ControlReceiver(Context c){
+	ControlReceiver(Context c, Handler h){
 		context = c;
+		
+		handler = h;
 	}
 	
 	private void setupChannel()
@@ -56,8 +60,7 @@ public class ControlReceiver extends Thread {
 		
     	NLog = ConfigData.NLog;
 		//CtrlChannel.send("Ping");
-		///////////////////////////////////
-		
+		///////////////////////////////////	
 				
 	}
 	
@@ -186,11 +189,6 @@ public class ControlReceiver extends Thread {
 		String jsondata = JSONValue.toJSONString(data);
 		CtrlChannel.send(jsondata, ip, port);		
 		
-		
-		//Log.d(TAG, "cnid " + rxdata.get("cnid"));
-		//Log.d(TAG, "ip " + ip);
-		//Log.d(TAG, "port " + String.valueOf(port));		
-		
 	}
 	
 	private void handle_disc_resp(JSONObject rxdata, String ip, int port){
@@ -233,8 +231,6 @@ public class ControlReceiver extends Thread {
 		String cnid = (String)rxdata.get("cnid");
 		String clusterid = (String)rxdata.get("cluster_id");
 		
-		//Log.d(TAG, "cnid = " + cnid);
-		//Log.d(TAG, "clid = " + Utils.getDeviceID());
 		if (cnid.equals(Utils.getDeviceID())){
 			// return BS_SELECT_CL_RESP
 			Map<String, Object> data=new LinkedHashMap();
@@ -296,13 +292,25 @@ public class ControlReceiver extends Thread {
 		int chunk_size = (Integer.valueOf((String.valueOf(rxdata.get("chunk_size")))));
 		String mime = (String)metadata.get("mime");
 		File sdPath = null;
+		String fullPath = null;
 		//Log.d(TAG, "MIME = " + mime);
 		
 		if ("file".equals(mime)){
+			
+			int totalBytes = Integer.valueOf((String) metadata.get("file_size"));
+			Message msg = handler.obtainMessage();
+			Bundle bundle = new Bundle();
+			bundle.putString("to", "UI");
+			bundle.putString("mtype", "FILE_START");
+			bundle.putInt("TOTAL_BYTES", totalBytes);
+            msg.setData(bundle);
+            handler.sendMessage(msg);
+            
 			// Open dst file
 			FileOutputStream out;
 			try {
-				sdPath = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) +  "/" + (String)metadata.get("name"));
+				fullPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) +  "/" + (String)metadata.get("name");
+				sdPath = new File(fullPath);
 				//out = context.openFileOutput((String)metadata.get("name"), Context.MODE_WORLD_READABLE);
 				out = new FileOutputStream(sdPath);
 			} catch (FileNotFoundException e1) {
@@ -330,12 +338,28 @@ public class ControlReceiver extends Thread {
 			
 			int nBytes = 0;
 			int tBytes = 0;
+			int curr_perc = 0;
+			int prev_perc = 0;
 			try {
 				InputStream is = clientSocket.getInputStream();
 								
 				while ((nBytes = is.read(chunk)) != -1){
 					out.write(chunk, 0, nBytes);
 					tBytes += nBytes;
+					
+					curr_perc = ((tBytes * 100) / totalBytes);
+					if (curr_perc != prev_perc){
+						msg = handler.obtainMessage();
+						bundle = new Bundle();
+						bundle.putString("to", "UI");
+						bundle.putString("mtype", "FILE_PROGRESS");
+						bundle.putInt("CURRENT_BYTES", curr_perc);
+						msg.setData(bundle);
+				        handler.sendMessage(msg);
+				        
+				        prev_perc = curr_perc;
+					}
+			        
 				}
 				is.close();
 				out.close();
@@ -366,60 +390,20 @@ public class ControlReceiver extends Thread {
 			String localIP = UDPConnection.getLocalIP(true);
 			CtrlChannel.send(jsondata, UDPConnection.getBroadcastAddr(localIP, UDPConnection.getNetMask()) , ConfigData.getCtrlPort());		
 			
-			Intent intent = new Intent();
-			intent.setAction(android.content.Intent.ACTION_VIEW);
-			intent.setDataAndType(Uri.fromFile(sdPath), "image/*");
-			context.startActivity(intent);					
+			msg = handler.obtainMessage();
+			bundle = new Bundle();
+			bundle.putString("to", "UI");
+			bundle.putString("mtype", "FILE_END");
+			bundle.putString("path", fullPath);
+			msg.setData(bundle);
+	        handler.sendMessage(msg);
 			
 		}
 		else{
 			Log.d(TAG, "Unknown MIME type received");
 			
 		}
-		/*
-		// Evaluate this data can be transmitted or not
 		
-		// Send CL_DATA_INIT_HOLD to BS
-		Map<String, Object> init_data_resp=new LinkedHashMap();
-		
-		init_data_resp.put("msgType", "CL_DATA_INIT_HOLD");
-		init_data_resp.put("clid", Utils.getDeviceID());
-		String jsondata = JSONValue.toJSONString(init_data_resp);
-		
-		String localIP = UDPConnection.getLocalIP(true);
-		CtrlChannel.send(jsondata, ip , port);	
-		
-				// Send CL_DATA_INIT_REQ message to all peers
-		Map<String, Object> init_data_msg=new LinkedHashMap();
-		
-		init_data_msg.put("msgType", "CL_DATA_INIT_REQ");
-		init_data_msg.put("clid", Utils.getDeviceID());
-		init_data_msg.put("chunk_size", chunk_size);
-		init_data_msg.put("metadata", metadata);
-		Map<String, Object> connection =new LinkedHashMap();
-		connection.put("port", ConfigData.getDataPort());
-		init_data_msg.put("connection", connection);
-		jsondata = JSONValue.toJSONString(init_data_msg);
-		
-		localIP = UDPConnection.getLocalIP(true);
-		CtrlChannel.send(jsondata, UDPConnection.getBroadcastAddr(localIP, UDPConnection.getNetMask()) , ConfigData.getCtrlPort());	
-		
-		// start new datarx thread
-		//dataThread = new DataHandler();
-		
-	    //dataThread.start();
-		
-		
-		// send CL_DATA_INIT_OK to BS
-		Map<String, Object> ok_resp=new LinkedHashMap();
-		
-		ok_resp.put("msgType", "CL_DATA_INIT_OK");
-		ok_resp.put("clid", Utils.getDeviceID());
-		jsondata = JSONValue.toJSONString(ok_resp);
-		
-		CtrlChannel.send(jsondata, ip , port);
-		
-		*/
 		
 	}
 			
@@ -433,7 +417,7 @@ public class ControlReceiver extends Thread {
 		
 		sdPath = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) +  "/" + fname);
 		
-		Thread t = new FileSenderTCP(context, ip, r_port, sdPath, chunk_size);
+		Thread t = new FileSenderTCP(context, handler, ip, r_port, sdPath, chunk_size);
 		t.start();
 		}
 		catch(Exception e){
@@ -448,8 +432,19 @@ public class ControlReceiver extends Thread {
 		int chunk_size = Integer.valueOf((String) rxdata.get("chunk_size"));
 		String mime = (String)metadata.get("mime");
 		String file_name = (String)metadata.get("name");
-		
+				
 		if ("file".equals(mime)){
+			// Send message to UI
+			int totalBytes = Integer.valueOf((String) metadata.get("file_size"));
+			Message msg = handler.obtainMessage();
+			Bundle bundle = new Bundle();
+			bundle.putString("to", "UI");
+			bundle.putString("mtype", "FILE_START");
+			bundle.putInt("TOTAL_BYTES", totalBytes);
+            msg.setData(bundle);
+            handler.sendMessage(msg);
+			
+			
 			FileOutputStream out;
 			ServerSocket serverSocket = null;
 			Socket connectionSocket = null;
@@ -459,8 +454,10 @@ public class ControlReceiver extends Thread {
 			int nBytes = 0;
 			int tBytes = 0;
 			File sdPath = null;
+			String fullPath = null;
 			try {
-				sdPath = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) +  "/" + file_name);
+				fullPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) +  "/" + file_name;
+				sdPath = new File(fullPath);
 				//out = context.openFileOutput((String)metadata.get("name"), Context.MODE_WORLD_READABLE);
 				out = new FileOutputStream(sdPath);
 			} catch (FileNotFoundException e1) {
@@ -491,7 +488,10 @@ public class ControlReceiver extends Thread {
 				connectionSocket = serverSocket.accept();
 				is = connectionSocket.getInputStream();
 				os = connectionSocket.getOutputStream();
-				//os.write(96);
+				
+				
+				int prev_perc = 0;
+				int curr_perc = 0;
 				// Receive data
 				Log.d(TAG, "Starting Transfer : " + connectionSocket.toString());
 				while ((nBytes = is.read(chunk)) != -1){
@@ -499,6 +499,20 @@ public class ControlReceiver extends Thread {
 					out.write(chunk, 0, nBytes);
 					tBytes += nBytes;
 					//Log.d(TAG, "Bytes Received = " + String.valueOf(tBytes));
+					
+					curr_perc = ((tBytes * 100) / totalBytes);
+					//Log.d(TAG, "Download % = " + String.valueOf(curr_perc));
+					if (curr_perc != prev_perc){
+						msg = handler.obtainMessage();
+						bundle = new Bundle();
+						bundle.putString("to", "UI");
+						bundle.putString("mtype", "FILE_PROGRESS");
+						bundle.putInt("CURRENT_BYTES", curr_perc);
+						msg.setData(bundle);
+				        handler.sendMessage(msg);
+				        
+				        prev_perc = curr_perc;
+					}
 				}				
 				
 			} catch (IOException e) {
@@ -521,12 +535,15 @@ public class ControlReceiver extends Thread {
 			
 			Log.d(TAG, "Total Bytes Received = " + String.valueOf(tBytes));
 			
-			Intent intent = new Intent();
-			intent.setAction(android.content.Intent.ACTION_VIEW);
-			intent.setDataAndType(Uri.fromFile(sdPath), "image/*");
-			context.startActivity(intent);    
+			msg = handler.obtainMessage();
+			bundle = new Bundle();
+			bundle.putString("to", "UI");
+			bundle.putString("mtype", "FILE_END");
+			bundle.putString("path", fullPath);
 			
-			
+			msg.setData(bundle);
+	        handler.sendMessage(msg);
+					
 		}
 		
 	}

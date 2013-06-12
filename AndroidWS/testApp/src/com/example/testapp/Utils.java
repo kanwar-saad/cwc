@@ -12,7 +12,7 @@ import android.content.Intent;
 import android.os.BatteryManager;
 import android.util.Log;
 
-public class Utils {
+public final class Utils {
 
 	private static final String TAG = "Battery";
 	
@@ -44,18 +44,12 @@ public class Utils {
 			    usbCharge = (chargePlug == BatteryManager.BATTERY_PLUGGED_USB);
 			    acCharge = (chargePlug == BatteryManager.BATTERY_PLUGGED_AC);
 			  
-			    batteryDataOk = true;
-			  
-			    //Log.v(TAG, "Battery Properties Updated" + String.valueOf(level) + " " +  String.valueOf(scale));
-			    //Log.v(TAG, "Battery Properties Updated");
-			    
+			    batteryDataOk = true;			    
         	} 
         	finally {
      		   l.unlock();
-     		}
-        	
-        	batteryDataOk = true;
-          
+     		}        	
+        	batteryDataOk = true;          
         }
       };      
       
@@ -64,14 +58,11 @@ public class Utils {
     	  Dictionary ret = new Hashtable();
     	  Lock l = batteryLock.readLock();
       	  l.lock();
-      	  try {
-      			
+      	  try {      			
       			ret.put("charge_percent", level_percent);
-      		  	//ret.put("charge_percent", 90);
-      			ret.put("charging", charging);
+      		  	ret.put("charging", charging);
       			ret.put("charge_ac", acCharge);
-      			ret.put("charge_usb", usbCharge);
-      		     			
+      			ret.put("charge_usb", usbCharge);      		     			
 	      } 
       	  finally {
    		     l.unlock();
@@ -91,9 +82,4 @@ public class Utils {
     	  return android.os.Build.MANUFACTURER + android.os.Build.HARDWARE + android.os.Build.DEVICE + android.os.Build.ID + android.os.Build.SERIAL;
       }
       
-      
-      
-	
-	
-	
-}
+} // End Class

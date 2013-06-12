@@ -15,15 +15,16 @@ import android.util.Log;
 
 
 
-public class ConfigData {
+public final class ConfigData {
 	private static final String TAG = "ConfigData";
+	public  static boolean isAppInitialized = false;
 	//private static ReadWriteLock ConfigLock = new ReentrantReadWriteLock();
 	
 	private static int controlPort = 36963;			// UDP Port for all control communication 
-	private static int dataPort = 36964;			// UDP port for data transfer
+	private static int dataPort    = 36964;			// UDP port for data transfer
 	
-	private static String bsIP = "192.168.1.90";	// IP for Base Station
-	private static int bsPort = 36965;	// Port for Base Station
+	private static String bsIP     = "192.168.1.90";	// IP for Base Station
+	private static int bsPort      = 36965;	            // Port for Base Station
 	
 	private static String facility = Facility.CN;	// Current facility of this node
 	
@@ -37,6 +38,11 @@ public class ConfigData {
 	public static File FilesDir;
 	public static NetLog NLog;						// Logging Server
 	
+	public class AppConstant{
+		public static final int CN_INFO_TIMEOUT = 10;
+		public static final int PEER_EXPIRE_AGE = 5;		// 5 * CN_INFO_TIMEOUT
+		
+	}
 	
 	public class Severity{
 		public static final String VERBOSE = "verbose";
@@ -54,11 +60,7 @@ public class ConfigData {
 		
 	}
 	
-	public class AppConstant{
-		public static final int CN_INFO_TIMEOUT = 15;
-		public static final int PEER_EXPIRE_AGE = 5;		// 5 * CN_INFO_TIMEOUT
-		
-	}
+	
 	
 	
 	// Getter functions
