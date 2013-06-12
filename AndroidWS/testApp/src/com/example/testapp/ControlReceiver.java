@@ -27,10 +27,7 @@ import com.example.testapp.ConfigData.Severity;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
-import android.os.Bundle;
 import android.os.Environment;
-import android.os.Handler;
-import android.os.Message;
 import android.util.Log;
 import android.webkit.MimeTypeMap;
 
@@ -42,13 +39,11 @@ public class ControlReceiver extends Thread {
 	private UDPConnection CtrlChannel;
 	private NetLog NLog;
 	private Context context;
-	private Handler handler;
 	private static Thread dataThread;
 	
 	
-	ControlReceiver(Context c, Handler h){
+	ControlReceiver(Context c){
 		context = c;
-		handler = h;
 	}
 	
 	private void setupChannel()
@@ -304,15 +299,6 @@ public class ControlReceiver extends Thread {
 		//Log.d(TAG, "MIME = " + mime);
 		
 		if ("file".equals(mime)){
-			
-			int totalBytes = Integer.valueOf((String) metadata.get("file_size"));
-			Message msg = handler.obtainMessage();
-			Bundle bundle = new Bundle();
-			bundle.putString("mtype", "FILE_START");
-			bundle.putInt("TOTAL_BYTES", totalBytes);
-            msg.setData(bundle);
-            handler.sendMessage(msg);
-            
 			// Open dst file
 			FileOutputStream out;
 			try {
@@ -344,27 +330,12 @@ public class ControlReceiver extends Thread {
 			
 			int nBytes = 0;
 			int tBytes = 0;
-			int curr_perc = 0;
-			int prev_perc = 0;
 			try {
 				InputStream is = clientSocket.getInputStream();
 								
 				while ((nBytes = is.read(chunk)) != -1){
 					out.write(chunk, 0, nBytes);
 					tBytes += nBytes;
-					
-					curr_perc = ((tBytes * 100) / totalBytes);
-					if (curr_perc != prev_perc){
-						msg = handler.obtainMessage();
-						bundle = new Bundle();
-						bundle.putString("mtype", "FILE_PROGRESS");
-						bundle.putInt("CURRENT_BYTES", curr_perc);
-						msg.setData(bundle);
-				        handler.sendMessage(msg);
-				        
-				        prev_perc = curr_perc;
-					}
-			        
 				}
 				is.close();
 				out.close();
@@ -394,12 +365,6 @@ public class ControlReceiver extends Thread {
 					
 			String localIP = UDPConnection.getLocalIP(true);
 			CtrlChannel.send(jsondata, UDPConnection.getBroadcastAddr(localIP, UDPConnection.getNetMask()) , ConfigData.getCtrlPort());		
-			
-			msg = handler.obtainMessage();
-			bundle = new Bundle();
-			bundle.putString("mtype", "FILE_END");
-			msg.setData(bundle);
-	        handler.sendMessage(msg);
 			
 			Intent intent = new Intent();
 			intent.setAction(android.content.Intent.ACTION_VIEW);
@@ -468,7 +433,7 @@ public class ControlReceiver extends Thread {
 		
 		sdPath = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) +  "/" + fname);
 		
-		Thread t = new FileSenderTCP(context, handler, ip, r_port, sdPath, chunk_size);
+		Thread t = new FileSenderTCP(context, ip, r_port, sdPath, chunk_size);
 		t.start();
 		}
 		catch(Exception e){
@@ -483,18 +448,8 @@ public class ControlReceiver extends Thread {
 		int chunk_size = Integer.valueOf((String) rxdata.get("chunk_size"));
 		String mime = (String)metadata.get("mime");
 		String file_name = (String)metadata.get("name");
-				
+		
 		if ("file".equals(mime)){
-			// Send message to UI
-			int totalBytes = Integer.valueOf((String) metadata.get("file_size"));
-			Message msg = handler.obtainMessage();
-			Bundle bundle = new Bundle();
-			bundle.putString("mtype", "FILE_START");
-			bundle.putInt("TOTAL_BYTES", totalBytes);
-            msg.setData(bundle);
-            handler.sendMessage(msg);
-			
-			
 			FileOutputStream out;
 			ServerSocket serverSocket = null;
 			Socket connectionSocket = null;
@@ -536,10 +491,7 @@ public class ControlReceiver extends Thread {
 				connectionSocket = serverSocket.accept();
 				is = connectionSocket.getInputStream();
 				os = connectionSocket.getOutputStream();
-				
-				
-				int prev_perc = 0;
-				int curr_perc = 0;
+				//os.write(96);
 				// Receive data
 				Log.d(TAG, "Starting Transfer : " + connectionSocket.toString());
 				while ((nBytes = is.read(chunk)) != -1){
@@ -547,19 +499,6 @@ public class ControlReceiver extends Thread {
 					out.write(chunk, 0, nBytes);
 					tBytes += nBytes;
 					//Log.d(TAG, "Bytes Received = " + String.valueOf(tBytes));
-					
-					curr_perc = ((tBytes * 100) / totalBytes);
-					//Log.d(TAG, "Download % = " + String.valueOf(curr_perc));
-					if (curr_perc != prev_perc){
-						msg = handler.obtainMessage();
-						bundle = new Bundle();
-						bundle.putString("mtype", "FILE_PROGRESS");
-						bundle.putInt("CURRENT_BYTES", curr_perc);
-						msg.setData(bundle);
-				        handler.sendMessage(msg);
-				        
-				        prev_perc = curr_perc;
-					}
 				}				
 				
 			} catch (IOException e) {
@@ -582,18 +521,10 @@ public class ControlReceiver extends Thread {
 			
 			Log.d(TAG, "Total Bytes Received = " + String.valueOf(tBytes));
 			
-			msg = handler.obtainMessage();
-			bundle = new Bundle();
-			bundle.putString("mtype", "FILE_END");
-			msg.setData(bundle);
-	        handler.sendMessage(msg);
-			
 			Intent intent = new Intent();
 			intent.setAction(android.content.Intent.ACTION_VIEW);
 			intent.setDataAndType(Uri.fromFile(sdPath), "image/*");
 			context.startActivity(intent);    
-			
-			
 			
 			
 		}

@@ -12,28 +12,22 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 
 import android.content.Context;
-import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
 import android.util.Log;
 
 public class FileSenderTCP extends Thread {
 	private static final String TAG = "FileSenderTCP";
 	private Context context;
-	private Handler handler;
 	private String ip = "";
 	private int port;
 	private int chunkSize;
 	private File filePath;
 	
 	
-	
-	public FileSenderTCP(Context ctx, Handler h, String mIp, int mPort, File fPath, int chunk_size){
+	public FileSenderTCP(Context ctx, String mIp, int mPort, File fPath, int chunk_size){
 		ip = mIp;
 		port = mPort;
 		filePath = fPath;
 		context = ctx;
-		handler = h;
 		chunkSize = chunk_size;
 	}
 	
@@ -51,9 +45,6 @@ public class FileSenderTCP extends Thread {
 				e1.printStackTrace();
 				return;
 			}  
-			
-			
-			
 			//clientSocket = new Socket(ip, port);
 			clientSocket = new Socket();
 			clientSocket.connect(new InetSocketAddress(ip, port), 5000);
@@ -67,9 +58,6 @@ public class FileSenderTCP extends Thread {
 			while ((nBytes = in.read(chunk)) != -1){
 				os.write(chunk, 0, nBytes);
 				tBytes += nBytes;
-				
-				
-				
 				//Log.d(TAG, "Bytes Transferred = " + String.valueOf(tBytes));
 			}
 			Log.d(TAG, "Total Bytes Transferred = " + String.valueOf(tBytes));
@@ -93,9 +81,6 @@ public class FileSenderTCP extends Thread {
 			}
 			
 		}
-		
-		
-		
 		
 	}	
 }
