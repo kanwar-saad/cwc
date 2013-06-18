@@ -29,6 +29,8 @@ public class ControllerService extends Service {
 
 	private static final String TAG = "ControllerService";
 	
+	
+	
 	/************ <Controller Local Objects> ***********/
 	private final IBinder mBinder = new MyBinder();
 	private Timer CNINFOTimer;

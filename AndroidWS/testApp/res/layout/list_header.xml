@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/list_header_bg"
+    android:orientation="horizontal"
+    android:padding="5dp" >
+
+     <ImageView
+         android:id="@+id/logo"
+         android:layout_width="wrap_content"
+         android:layout_height="wrap_content"
+         android:layout_alignParentLeft="false"
+         android:layout_alignParentRight="true"
+         android:layout_centerVertical="true"
+         android:src="@drawable/logo2" />
+
+    <RelativeLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerVertical="true"
+        android:layout_toLeftOf="@id/logo"
+        android:orientation="horizontal"
+        android:padding="5dp" >
+     
+    <TextView
+        android:id="@+id/appLabel1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentTop="true"
+        android:text="Centre For Wireless Communication"
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:textColor="@color/LogoColor"
+        android:textStyle="bold"
+        android:textSize="14dp"
+        android:typeface="serif" />
+    
+     <TextView
+         android:id="@+id/appLabel2"
+         android:layout_width="wrap_content"
+         android:layout_height="wrap_content"
+         android:layout_alignParentBottom="true"
+         android:layout_alignParentRight="true"
+         android:layout_below="@id/appLabel1"
+         android:textStyle="bold"
+         android:text="(CWC)"
+         android:textAppearance="?android:attr/textAppearanceMedium"
+         android:textColor="@color/LogoColor"
+         android:textSize="14dp"
+         android:typeface="serif" />
+
+    </RelativeLayout>
+</RelativeLayout>

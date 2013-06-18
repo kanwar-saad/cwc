@@ -244,6 +244,14 @@ public class ControlReceiver extends Thread {
 			CtrlChannel.send(jsondata, ip, port);
 			
 			// Change Role to CL
+			boolean roleChanged = false;
+			if (ConfigData.getFacility().equals(Facility.CL)){
+				roleChanged = false;
+			}
+			else{
+				roleChanged = true;
+			}
+				
 			ConfigData.setFacility(Facility.CL);
 						
 			// Send message to peers
@@ -259,6 +267,17 @@ public class ControlReceiver extends Thread {
 			String localIP = UDPConnection.getLocalIP(true);
 			CtrlChannel.send(jsondata, UDPConnection.getBroadcastAddr(localIP, UDPConnection.getNetMask()) , ConfigData.getCtrlPort());		
 			
+			// Update UI
+			if (roleChanged == true){
+				Message msg = handler.obtainMessage();
+				Bundle bundle = new Bundle();
+				bundle.putString("to", "UI");
+				bundle.putString("mtype", "ROLE_CHANGED");
+				bundle.putString("role", "CL");
+	            msg.setData(bundle);
+	            handler.sendMessage(msg);
+			}
+			
 		}
 		else{
 			Log.d(TAG, "CL Selection ID does not match");
@@ -273,6 +292,13 @@ public class ControlReceiver extends Thread {
 		
 		//Log.d(TAG, "New clid = " + clid);
 		//Log.d(TAG, "New cluster ID = " + clusterid);
+		boolean roleChanged = false;
+		if (ConfigData.getFacility().equals(Facility.CN)){
+			roleChanged = false;
+		}
+		else{
+			roleChanged = true;
+		}
 		
 		ConfigData.setFacility(Facility.CN);	// Set Current role a CN
 	
@@ -282,6 +308,17 @@ public class ControlReceiver extends Thread {
 		new_cl.ID = clid;
 		
 		ConfigData.setCL(new_cl);	
+		
+		// Update UI
+		if (roleChanged == true){
+			Message msg = handler.obtainMessage();
+			Bundle bundle = new Bundle();
+			bundle.putString("to", "UI");
+			bundle.putString("mtype", "ROLE_CHANGED");
+			bundle.putString("role", "CN");
+	        msg.setData(bundle);
+	        handler.sendMessage(msg);
+		}
 		
 	}
 
@@ -297,19 +334,19 @@ public class ControlReceiver extends Thread {
 		
 		if ("file".equals(mime)){
 			
-			int totalBytes = Integer.valueOf((String) metadata.get("file_size"));
+			long totalBytes = Integer.valueOf((String) metadata.get("file_size"));
 			Message msg = handler.obtainMessage();
 			Bundle bundle = new Bundle();
 			bundle.putString("to", "UI");
 			bundle.putString("mtype", "FILE_START");
-			bundle.putInt("TOTAL_BYTES", totalBytes);
+			bundle.putLong("TOTAL_BYTES", totalBytes);
             msg.setData(bundle);
             handler.sendMessage(msg);
             
 			// Open dst file
 			FileOutputStream out;
 			try {
-				fullPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) +  "/" + (String)metadata.get("name");
+				fullPath = ConfigData.getAppPath() +  "/" + (String)metadata.get("name");
 				sdPath = new File(fullPath);
 				//out = context.openFileOutput((String)metadata.get("name"), Context.MODE_WORLD_READABLE);
 				out = new FileOutputStream(sdPath);
@@ -337,7 +374,7 @@ public class ControlReceiver extends Thread {
 			
 			
 			int nBytes = 0;
-			int tBytes = 0;
+			long tBytes = 0;
 			int curr_perc = 0;
 			int prev_perc = 0;
 			try {
@@ -347,7 +384,7 @@ public class ControlReceiver extends Thread {
 					out.write(chunk, 0, nBytes);
 					tBytes += nBytes;
 					
-					curr_perc = ((tBytes * 100) / totalBytes);
+					curr_perc = (int)((tBytes * 100) / totalBytes);
 					if (curr_perc != prev_perc){
 						msg = handler.obtainMessage();
 						bundle = new Bundle();
@@ -394,7 +431,7 @@ public class ControlReceiver extends Thread {
 			bundle = new Bundle();
 			bundle.putString("to", "UI");
 			bundle.putString("mtype", "FILE_END");
-			bundle.putString("path", fullPath);
+			bundle.putString("path", (String)metadata.get("name"));
 			msg.setData(bundle);
 	        handler.sendMessage(msg);
 			
@@ -415,7 +452,7 @@ public class ControlReceiver extends Thread {
 		int chunk_size = Integer.valueOf((String) rxdata.get("chunk_size"));
 		File sdPath;
 		
-		sdPath = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) +  "/" + fname);
+		sdPath = new File(ConfigData.getAppPath() +  "/" + fname);
 		
 		Thread t = new FileSenderTCP(context, handler, ip, r_port, sdPath, chunk_size);
 		t.start();
@@ -435,12 +472,12 @@ public class ControlReceiver extends Thread {
 				
 		if ("file".equals(mime)){
 			// Send message to UI
-			int totalBytes = Integer.valueOf((String) metadata.get("file_size"));
+			long totalBytes = Integer.valueOf((String) metadata.get("file_size"));
 			Message msg = handler.obtainMessage();
 			Bundle bundle = new Bundle();
 			bundle.putString("to", "UI");
 			bundle.putString("mtype", "FILE_START");
-			bundle.putInt("TOTAL_BYTES", totalBytes);
+			bundle.putLong("TOTAL_BYTES", totalBytes);
             msg.setData(bundle);
             handler.sendMessage(msg);
 			
@@ -452,11 +489,11 @@ public class ControlReceiver extends Thread {
 			OutputStream os = null;
 			byte[] chunk = new byte[chunk_size];
 			int nBytes = 0;
-			int tBytes = 0;
+			long tBytes = 0;
 			File sdPath = null;
 			String fullPath = null;
 			try {
-				fullPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) +  "/" + file_name;
+				fullPath = ConfigData.getAppPath() +  "/" + file_name;
 				sdPath = new File(fullPath);
 				//out = context.openFileOutput((String)metadata.get("name"), Context.MODE_WORLD_READABLE);
 				out = new FileOutputStream(sdPath);
@@ -500,9 +537,11 @@ public class ControlReceiver extends Thread {
 					tBytes += nBytes;
 					//Log.d(TAG, "Bytes Received = " + String.valueOf(tBytes));
 					
-					curr_perc = ((tBytes * 100) / totalBytes);
+					curr_perc = (int)((tBytes * 100) / totalBytes);
 					//Log.d(TAG, "Download % = " + String.valueOf(curr_perc));
 					if (curr_perc != prev_perc){
+						Log.d(TAG, "Download % = " + String.valueOf(curr_perc));
+						
 						msg = handler.obtainMessage();
 						bundle = new Bundle();
 						bundle.putString("to", "UI");
@@ -539,7 +578,7 @@ public class ControlReceiver extends Thread {
 			bundle = new Bundle();
 			bundle.putString("to", "UI");
 			bundle.putString("mtype", "FILE_END");
-			bundle.putString("path", fullPath);
+			bundle.putString("path", file_name);
 			
 			msg.setData(bundle);
 	        handler.sendMessage(msg);

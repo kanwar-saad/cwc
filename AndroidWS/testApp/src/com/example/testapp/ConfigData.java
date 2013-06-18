@@ -17,7 +17,8 @@ import android.util.Log;
 
 public final class ConfigData {
 	private static final String TAG = "ConfigData";
-	public  static boolean isAppInitialized = false;
+	private static String APP_PATH = null;
+	private static String tmpDelFileName = null;
 	//private static ReadWriteLock ConfigLock = new ReentrantReadWriteLock();
 	
 	private static int controlPort = 36963;			// UDP Port for all control communication 
@@ -71,6 +72,8 @@ public final class ConfigData {
 	public synchronized static Node getCL() { return CL.clone();}
 	public synchronized static String getBSAddress() { return bsIP;}
 	public synchronized static int getBSPort() { return bsPort;}
+	public synchronized static String getAppPath() { return APP_PATH;}
+	public synchronized static String getdelFile() {return tmpDelFileName;}
 	
 	// Setter Functions
 	public synchronized static void setCtrlPort(int port) {controlPort = port;}
@@ -79,6 +82,8 @@ public final class ConfigData {
 	public synchronized static void setCL(Node n) { CL = n;}
 	public synchronized static void setBSAddress(String s) { bsIP = s;}
 	public synchronized static void setBSPort(int port) { bsPort = port;}
+	public synchronized static void setAppPath(String path) { APP_PATH = path;}
+	public synchronized static void setdelFile(String file) { tmpDelFileName = file;}
 	
 	
 	public synchronized static Node getPeer(String id){
