@@ -16,14 +16,24 @@ cs_port = 8089
 cs_data_port = 4446 
 csSock = None
 data_chunk_size = 1024
-file_name = "bamboo.jpg"
+#file_name = "bamboo.jpg"
 
 def get_next_chunk(src, size):
             data = src.read(size)
             return data 
 
-def start():
+def start(argv=None):
 
+
+    # Check if the input file exist or not
+    in_file = argv[0]
+    try:
+        with open(in_file) as f: pass
+    except IOError as e:
+        print 'Error : Input file: "%s", do not exist'% in_file
+        return
+
+    
     print "Starting Content Server"
     try:
         csSock = socket(AF_INET, SOCK_DGRAM)
@@ -35,6 +45,7 @@ def start():
     print "Initialization complete"
     
     try:
+        file_name = in_file
         src_file = open(file_name, 'rb')
         file_size = os.path.getsize(file_name) 
 
@@ -75,7 +86,7 @@ def start():
                 break
 
         src_file.close()
-        s.shutdown(1);
+        s.shutdown(2);
         s.close();
         print "Iterations = ", str(iterations)
 
@@ -97,4 +108,4 @@ def start():
 
 
 if __name__ == "__main__":
-    start()
+    start(sys.argv[1:])
