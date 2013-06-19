@@ -1,0 +1,8 @@
+package com.example.testapp;
+
+public class DataHandler extends Thread {
+	
+	public void run(){
+	
+	
+}

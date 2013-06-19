@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="Rename resource &apos;testApp/src/com/example/testapp/NetUtils.java&apos; to &apos;UDPConnection.java&apos;" description="Rename resource &apos;NetUtils.java&apos;" flags="7" id="org.eclipse.ltk.core.refactoring.rename.resource" input="src/com/example/testapp/NetUtils.java" name="UDPConnection.java" stamp="1366735879865" updateReferences="true"/>
+</session>
